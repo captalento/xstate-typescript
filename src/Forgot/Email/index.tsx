@@ -5,7 +5,7 @@ interface Props {
 }
 
 function Email({ collectEmail }: Props) {
-  const [email, setEmail] = React.useState('');
+  const [email, setEmail] = React.useState('test@email.com');
 
   return (
     <div>

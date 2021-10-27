@@ -5,14 +5,14 @@ import { initialContext } from './initialContext';
 import { ForgotContext } from './context';
 import { ForgotEvent } from './event';
 
-function sendEmail(email: string) {
+function genericMock({ body = {}, data = {}, isSuccess = true }: any): any {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      if (email) {
-        return resolve({ data: null });
+      if (isSuccess) {
+        return resolve(data);
       }
-      reject();
-    }, 3000);
+      return reject(data);
+    }, 500);
   });
 }
 
@@ -36,22 +36,21 @@ export const forgotMachine = createMachine<
           },
         },
       },
-      // 'CODE_IS_VALID_GATEWAY': {
-      //   always: [
-      //     {
-      //       target: 'state'
-      //       cond: (context) => context.code === context.correctCode 
-      //     },
-      //     {
-      //       target: 'state2'
-      //       cond: (context) => context.code !== context.correctCode 
-      //     }
-      //     {
-      //       target: 'state2'
-      //       cond: (context) => context.code !== context.correctCode 
-      //     }
-      //   ]
-      // },
+      [STATES.CODE_IS_VALID_GATEWAY]: {
+        always: [
+          {
+            target: STATES.SHOW_PASSWORD,
+            cond: (context) => context.isValid,
+          },
+          {
+            target: STATES.SHOW_CODE_CONFIRM,
+            cond: (context) => context.isValid === false,
+            actions: assign({
+              error: (_context, event) => true,
+            }),
+          },
+        ],
+      },
       [STATES.SEND_EMAIL]: {
         invoke: {
           src: SERVICES.SERVICE_SEND_EMAIL,
@@ -73,15 +72,71 @@ export const forgotMachine = createMachine<
       },
       [STATES.SHOW_CODE_CONFIRM]: {
         on: {
-
-        }
-      }
+          [EVENTS.COLLECT_CODE]: {
+            target: STATES.VALIDATE_CODE,
+            actions: assign({
+              code: (_context, event) => event.code,
+            }),
+          },
+        },
+      },
+      [STATES.VALIDATE_CODE]: {
+        invoke: {
+          src: SERVICES.SERVICE_VALIDATE_CODE,
+          onDone: {
+            target: STATES.SHOW_PASSWORD,
+            actions: assign({
+              isValid: (_context, { data }) => data.isValid,
+            }),
+          },
+          onError: {
+            target: STATES.SHOW_CODE_CONFIRM,
+          },
+        },
+        entry: ACTIONS.TOGGLE_LOADING,
+        exit: ACTIONS.TOGGLE_LOADING,
+      },
+      [STATES.SHOW_PASSWORD]: {
+        on: {
+          [EVENTS.COLLECT_PASSWORD]: {
+            target: STATES.SAVE_PASSWORD,
+            actions: assign({
+              password: (_context, event) => event.password,
+            }),
+          },
+        },
+      },
+      [STATES.SAVE_PASSWORD]: {
+        invoke: {
+          src: SERVICES.SERVICE_VALIDATE_PASSWORD,
+          onDone: {
+            target: STATES.SUCCESS,
+          },
+          onError: {
+            target: STATES.SHOW_PASSWORD,
+          },
+        },
+      },
+      [STATES.SUCCESS]: {},
     },
   },
   {
     services: {
       [SERVICES.SERVICE_SEND_EMAIL]: async (context) => {
-        await sendEmail(context.email);
+        await genericMock({ body: context.email });
+      },
+      [SERVICES.SERVICE_VALIDATE_CODE]: async (context) => {
+        const data = await genericMock({
+          body: context.code,
+          data: { isValid: context.code === '123456' },
+        });
+
+        return data;
+      },
+      [SERVICES.SERVICE_VALIDATE_PASSWORD]: async (context) => {
+        await genericMock({
+          body: context.password
+        });
       },
     },
     actions: {

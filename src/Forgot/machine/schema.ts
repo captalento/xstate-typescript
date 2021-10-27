@@ -15,6 +15,28 @@ export type ForgotTypestate =
       context: ForgotContext;
     }
   | {
-    value: STATES.SHOW_CODE_CONFIRM;
+      value: STATES.SHOW_CODE_CONFIRM;
+      context: ForgotContext;
+    }
+  | {
+      value: STATES.VALIDATE_CODE;
+      context: ForgotContext;
+    }
+  | {
+      value: STATES.SHOW_PASSWORD;
+      context: ForgotContext;
+    }
+  | {
+      value: STATES.CODE_IS_VALID_GATEWAY;
+      context: ForgotContext;
+  }
+  | {
+    value: STATES. SAVE_PASSWORD;
+    context: ForgotContext;
+  }
+  | {
+    value: STATES.SUCCESS;
     context: ForgotContext;
   };
+
+ 
